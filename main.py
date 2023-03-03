@@ -1,10 +1,7 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
 import torch 
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
 from wgan import FE, Discriminator, Classifier, Wasserstein_Loss, Grad_Loss
 from tqdm import tqdm
 import os
@@ -13,23 +10,19 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
-import matplotlib.pyplot as plt
+
+import os
+os.getcwd()
+
+log = open("log.txt", "w")
+print("DRDA_Wasserstein_Loss\n", file=log)
+log.close()
 
 def printsave(*a, end='\n') :
     print(*a, end=end)
     log = open("log.txt", "a")
     print(*a, file=log, end=end)
     log.close()
-    
-# In[2]:
-
-
-import os
-os.getcwd()
-
-
-# In[3]:
-
 
 # path
 path = r'../data_preprocessed_matlab/'  # 경로는 저장 파일 경로
@@ -40,7 +33,7 @@ for i in file_list:    # 확인
     printsave(i, end=' ')
 
 
-for i in file_list : 
+for i in tqdm(file_list, desc="read data"): 
     mat_file = io.loadmat(path+i)
     data = mat_file['data']
     labels = np.array(mat_file['labels'])
@@ -57,16 +50,12 @@ for i in file_list :
     VAL = np.concatenate((VAL ,val),axis=0)
     ARO = np.concatenate((ARO ,aro),axis=0)
 
-
-# In[4]:
-
-
 # eeg preprocessing
 
 eeg_data = []
 peripheral_data = []
 
-for i in range(len(Data)):
+for i in tqdm(range(len(Data)), desc="preprocess channel"):
     for j in range (40): 
         if(j < 32): # get channels 1 to 32
             eeg_data.append(Data[i][j])
@@ -79,31 +68,23 @@ eeg_data = eeg_data.astype('float32')
 eeg_data32 = torch.from_numpy(eeg_data)
 VAL = (torch.from_numpy(VAL)).type(torch.long)
 
-
-# In[5]:
-
-
 #data 40 x 40 x 8064 video/trial x channel x data
 #labels 40 x 4 video/trial x label (valence, arousal, dominance, liking)
-#32명 -> 14 / 14 / 4
+#32명 -> 12 / 12 / 8
 
 # data split
 printsave("data split")
-train_data, val_data, train_label, val_label = train_test_split(eeg_data32, VAL, test_size=0.125)
+train_data, val_data,train_label, val_label = train_test_split(eeg_data32, VAL, test_size=0.25)
 x_train, x_test, y_train, y_test = train_test_split(train_data, train_label, test_size=0.5)
 
 # make data loader
 printsave("make data loader")
-source_dataset = TensorDataset(x_train, y_train)
-target_dataset = TensorDataset(x_test, y_test)
+target_dataset = TensorDataset(x_train, y_train)
+source_dataset = TensorDataset(x_test, y_test)
 val_dataset = TensorDataset(val_data, val_label)
 target_dataloader = DataLoader(target_dataset, 64, shuffle=True)
 source_dataloader = DataLoader(source_dataset, 64, shuffle=True)
 val_dataloader = DataLoader(val_dataset, 64, shuffle=True)
-
-
-# In[6]:
-
 
 # cuda
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -122,10 +103,6 @@ optimizer_cls = optim.Adam(classifier.parameters(),lr=0.0001, betas=(0,0.9))
 #cls_loss
 criterion = nn.CrossEntropyLoss().to(device)
 
-
-# In[7]:
-
-
 # train WGAN
 accuracy_s = []
 accuracy_t = []
@@ -133,17 +110,18 @@ accuracy_val = []
 val_loss_list = []
 
 best_loss = 10000000
-limit_epoch = 50
+limit_epoch = 100
 limit_check = 0
 val_loss = 0
 nb_epochs = 1000
 lambda_hyper = 10
-mu_hyper = 1
+mu_hyper = 10
 n = 5
-epochs = 0
 
 torch.autograd.set_detect_anomaly(True)
 
+epochs = 0
+printsave()
 # while parameter converge
 for epoch in range(nb_epochs):
     temp_accuracy_t = 0
@@ -227,7 +205,7 @@ for epoch in range(nb_epochs):
         dc_s = dis(feat_s)
         wd_loss = Wasserstein_Loss(dc_s, dc_t)
         cls_loss_source = criterion(pred_s, y_source-1)
-        fe_loss = cls_loss_source + wd_loss
+        fe_loss = cls_loss_source + mu_hyper*wd_loss
         fe_loss.backward()
         optimizer_fe.step()
         

@@ -85,17 +85,17 @@ VAL = (torch.from_numpy(VAL)).type(torch.long)
 
 #data 40 x 40 x 8064 video/trial x channel x data
 #labels 40 x 4 video/trial x label (valence, arousal, dominance, liking)
-#32명 -> 12 / 12 / 8
+#32명 -> 14 / 14 / 4
 
 # data split
 printsave("data split")
-train_data, val_data,train_label, val_label = train_test_split(eeg_data32, VAL, test_size=0.25)
+train_data, val_data, train_label, val_label = train_test_split(eeg_data32, VAL, test_size=0.125)
 x_train, x_test, y_train, y_test = train_test_split(train_data, train_label, test_size=0.5)
 
 # make data loader
 printsave("make data loader")
-target_dataset = TensorDataset(x_train, y_train)
-source_dataset = TensorDataset(x_test, y_test)
+source_dataset = TensorDataset(x_train, y_train)
+target_dataset = TensorDataset(x_test, y_test)
 val_dataset = TensorDataset(val_data, val_label)
 target_dataloader = DataLoader(target_dataset, 64, shuffle=True)
 source_dataloader = DataLoader(source_dataset, 64, shuffle=True)

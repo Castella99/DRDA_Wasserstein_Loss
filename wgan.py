@@ -44,8 +44,8 @@ class Classifier(nn.Module) :
     def forward(self, x) :
         return self.fc(x)
 
-def Wasserstein_Loss(pred_s, pred_t) :
-    return torch.mean(pred_s) - torch.mean(pred_t)
+def Wasserstein_Loss(dc_s, dc_t) :
+    return torch.mean(dc_s) - torch.mean(dc_t)
 
 def Grad_Loss(feat, dis, device) :
     feat_ = feat.clone().detach().to(device).requires_grad_(True)

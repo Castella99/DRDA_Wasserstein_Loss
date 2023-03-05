@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class FE(nn.Module):
-    def __init__(self, channel_size):
+    def __init__(self, channel_size=32):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(1,30,kernel_size=(1,25)),
@@ -15,9 +15,9 @@ class FE(nn.Module):
         return self.conv(x)
 
 class Discriminator(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size=15960):
         super().__init__()
-        self.model = nn.Sequential(
+        self.dis = nn.Sequential(
             nn.Linear(input_size, 64),
             nn.LeakyReLU(),
             nn.Linear(64, 32),
@@ -28,7 +28,7 @@ class Discriminator(nn.Module):
         )
     
     def forward(self, x):
-        return self.model(x)
+        return self.dis(x)
 
 class Classifier(nn.Module) :
     def __init__(self, input_size=15960, cls_num=9) :
@@ -38,7 +38,8 @@ class Classifier(nn.Module) :
             nn.LeakyReLU(),
             nn.Linear(64, 16),
             nn.LeakyReLU(),
-            nn.Linear(16, cls_num)
+            nn.Linear(16, cls_num),
+            nn.Sigmoid()
         )
 
     def forward(self, x) :
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     print("device: ", device)
     input_s = torch.randn(64, 1, 32, 8064).to(device)
     input_t = torch.randn(64, 1, 32, 8064).to(device)
+    output = torch.randn(64,2)
     dis = Discriminator(15960).to(device)
     fe = FE(32).to(device)
     classifier = Classifier().to(device)
@@ -66,12 +68,5 @@ if __name__ == "__main__":
     feat_t = fe(input_t)
     pred_s = classifier(feat_s)
     pred_t = classifier(feat_t)
-    feat = torch.cat((feat_s,feat_t), dim=0)
-    print("loss", Grad_Loss(feat, dis, device))
-
-    print("-"*50)
-    test_a = torch.randn(128, 15960).to(device)
-    print(torch.norm(test_a, dim=1).shape) # norm에 대한 평균
-    print(torch.mean(test_a, dim=0).shape) # 평균값에 대한 norm
-    print(torch.norm(test_a, dim=1).mean().item())
-    print(torch.mean(test_a, dim=0).norm().item())
+    print(pred_s.shape)
+    #criterion = nn.CrossEntropyLoss(pred_s, output)

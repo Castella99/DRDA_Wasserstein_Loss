@@ -10,19 +10,13 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
-
 import os
+
 os.getcwd()
 
 log = open("log.txt", "w")
 print("DRDA_Wasserstein_Loss\n", file=log)
 log.close()
-
-def printsave(*a, end='\n') :
-    print(*a, end=end)
-    log = open("log.txt", "a")
-    print(*a, file=log, end=end)
-    log.close()
 
 # path
 path = r'../data_preprocessed_matlab/'  # 경로는 저장 파일 경로
@@ -67,6 +61,7 @@ eeg_data = np.reshape(eeg_data, (len(Data),1,32, 8064))
 eeg_data = eeg_data.astype('float32')
 eeg_data32 = torch.from_numpy(eeg_data)
 VAL = (torch.from_numpy(VAL)).type(torch.long)
+
 
 #data 40 x 40 x 8064 video/trial x channel x data
 #labels 40 x 4 video/trial x label (valence, arousal, dominance, liking)
@@ -263,7 +258,7 @@ for epoch in range(nb_epochs):
         limit_check = 0
     printsave()
 
-printsave("accuracy_t ", sum(accuracy_t)/len(accuracy_t))
+printsave("\naccuracy_t ", sum(accuracy_t)/len(accuracy_t))
 printsave("accuracy_s ", sum(accuracy_s)/len(accuracy_s))
 printsave("accuracy_val", sum(accuracy_val)/len(accuracy_val))
 printsave("best_val_loss ", best_loss)

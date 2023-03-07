@@ -3,6 +3,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import numpy as np
 from wgan import FE, Discriminator, Classifier, Wasserstein_Loss, Grad_Loss
+from sklearn.metrics import confusion_matrix, classification_report, roc_auc_score
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
@@ -15,9 +16,9 @@ def printsave(*a, end='\n') :
     print(*a, file=log, end=end)
     log.close()
 
-def make_dataloader(input, output) :
+def make_dataloader(input, output, val_ratio=0.125) :
     print("data split")
-    train_data, val_data,train_label, val_label = train_test_split(input, output, test_size=0.25)
+    train_data, val_data,train_label, val_label = train_test_split(input, output, test_size=val_ratio)
     x_train, x_test, y_train, y_test = train_test_split(train_data, train_label, test_size=0.5)
 
     # make data loader
@@ -182,18 +183,31 @@ def train_val(source_dataloader, target_dataloader, val_dataloader, label, nb_ep
         classifier.eval()
         val_loss = 0
         temp = 0
+        y_val_full = np.array([])
+        pred_val_full = np.array([])
+
         for x_val, y_val in val_dataloader:
             x_val = x_val.to(device)
             y_val = y_val.to(device)
             pred_val = classifier(fe(x_val))
+            y_val_full = np.concatenate((y_val_full, y_val.detach().cpu().numpy()),axis=0)
+            pred_val_full = np.concatenate((pred_val_full, (torch.argmax(pred_val,1)+1).detach().cpu().numpy()),axis=0)
             temp_accuracy_val += ((torch.argmax(pred_val,1)+1)== y_val).to(torch.float).mean()
             loss = cls_loss(pred_val, y_val-1)
             val_loss += loss.item() * x_val.size(0)
             temp += 1
+
         val_total_loss = val_loss / len(val_dataloader.dataset)
         val_loss_list.append(val_total_loss)
         printsave("val_loss :", val_total_loss)
-        printsave("acc_val :", temp_accuracy_val.item()/temp)
+        #printsave("acc_val :", temp_accuracy_val.item()/temp)
+
+        cm = confusion_matrix(y_val_full, pred_val_full)
+        printsave("\nconfusion_matrix")
+        printsave(cm)
+        printsave()
+        printsave(classification_report(y_val_full, pred_val_full, labels=[1,2,3,4,5,6,7,8,9], zero_division=0))
+
         accuracy_val.append(temp_accuracy_val.item()/temp)
         epochs = epochs + 1
         if val_total_loss > best_loss:
